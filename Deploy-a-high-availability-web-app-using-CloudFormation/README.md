@@ -4,7 +4,7 @@
 
 This project deploys a high-availability web app using CloudFormation to AWS Cloud.
 
-Instructions
+## Instructions
 
 The infrasctructure necessary to run the Udagram application on AWS Cloud is splited in three files: *infrasctructure.yml*, *bastion.yml* and *servers.yml*. In order to deploy the whole infrasctructure this scripts need to be runned one by one as below:
 
