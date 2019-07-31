@@ -8,10 +8,10 @@ Parameters:
     Description: An environment name that will be prefixed to resources
     Type: String
 
-  SSHKeyfileName:
-    Description: An SSH Keyfile name that will be used to login into resources
+  S3BucketName:
+    Description: The S3 bucket's name used to store web app content
     Type: String
-    Default: udacityproject
+    Default: udacityproject-bucket
 
 Resources:
 
@@ -43,12 +43,12 @@ Resources:
           Action:
           - s3:ListBucket
           Resource:
-          - arn:aws:s3:::udacityproject-bucket
+          - !Join ["", ["arn:aws:s3:::", !Sub "${S3BucketName}"]]
         - Effect: Allow
           Action:
           - s3:GetObject
           Resource:
-          - arn:aws:s3:::udacityproject-bucket/*
+          - !Join ["", ["arn:aws:s3:::", !Sub "${S3BucketName}/*"]]
       Roles:
       - Ref: IAMRole
 
@@ -99,7 +99,6 @@ Resources:
             !Sub "${EnvironmentName}-BAST-SC"
       IamInstanceProfile: !Ref ProfileWithRolesForOurApp
       InstanceType: t3.medium
-      KeyName: !Sub "${SSHKeyfileName}" ## Used by bastion host
       BlockDeviceMappings:
       - DeviceName: "/dev/sdk"
         Ebs:

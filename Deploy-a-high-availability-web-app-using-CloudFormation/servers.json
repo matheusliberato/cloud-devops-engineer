@@ -4,7 +4,7 @@
     "ParameterValue": "UdacityProject"
   },
   {
-    "ParameterKey": "SSHKeyfileName",
-    "ParameterValue": "udacityproject"
+    "ParameterKey": "S3BucketName",
+    "ParameterValue": "udacityproject-bucket"
   }
 ]
