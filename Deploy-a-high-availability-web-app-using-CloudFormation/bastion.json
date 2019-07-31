@@ -1,0 +1,22 @@
+[
+  {
+    "ParameterKey": "EnvironmentName",
+    "ParameterValue": "UdacityProject"
+  },
+  {
+    "ParameterKey": "MyHomeIpAddressCidr",
+    "ParameterValue": "179.159.238.24/32"
+  },
+  {
+    "ParameterKey": "PrivateSubnet1CIDR",
+    "ParameterValue": "10.0.2.0/24"
+  },
+  {
+    "ParameterKey": "PrivateSubnet2CIDR",
+    "ParameterValue": "10.0.3.0/24"
+  },
+  {
+    "ParameterKey": "SSHKeyfileName",
+    "ParameterValue": "udacityproject"
+  }
+]

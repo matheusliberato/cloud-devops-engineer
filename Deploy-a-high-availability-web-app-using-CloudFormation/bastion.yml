@@ -1,0 +1,119 @@
+Description:
+  Matheus Liberato / Udacity Project 2019
+  This script deploys a bastion host on my public subnets. This machine is enabled
+  to receive inbound traffic on SSH port (22) only from my home ip address.
+
+Parameters:
+
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resources
+    Type: String
+
+  MyHomeIpAddressCidr:
+    Description: The Home IP Address' CIDR.
+    Type: String
+
+  PrivateSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for this
+    Type: String
+    Default:  10.0.2.0/24
+
+  PrivateSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for this
+    Type: String
+    Default:  10.0.3.0/24
+
+  SSHKeyfileName:
+    Description: An SSH Keyfile name that will be used to login into resources
+    Type: String
+    Default: udacityproject
+
+Resources:
+
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow inbound/oubound SSH connections on bastion instances only from my IP address.
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      # Inbound traffic
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub "${MyHomeIpAddressCidr}"
+      # Outbound traffic
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub "${PrivateSubnet1CIDR}"
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub "${PrivateSubnet2CIDR}"
+
+  BastionHost1:
+    Type: AWS::EC2::Instance
+    Properties:
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sda1"
+        Ebs:
+            VolumeSize: '10'
+      InstanceType: t2.micro
+      KeyName: !Sub "${SSHKeyfileName}"
+      ImageId: ami-06f2f779464715dc5
+      SecurityGroupIds:
+      - Ref: BastionSecurityGroup
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PUB1-SN"
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-BAST-1"
+
+  BastionHost2:
+    Type: AWS::EC2::Instance
+    Properties:
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sda1"
+        Ebs:
+            VolumeSize: '10'
+      InstanceType: t2.micro
+      KeyName: udacityproject
+      ImageId: ami-06f2f779464715dc5
+      SecurityGroupIds:
+      - Ref: BastionSecurityGroup
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PUB2-SN"
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-BAST-2"
+
+  SSHFromBastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: [BastionHost1, BastionHost2]
+    Properties:
+      GroupDescription: Allow SSH connections in private instances only from bastion internal IPs
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      # Inbound traffic
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Join [ "", [ !GetAtt BastionHost1.PrivateIp, "/32" ]]
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Join [ "", [ !GetAtt BastionHost2.PrivateIp, "/32" ]]
+
+Outputs:
+  SSHFromBastionSecurityGroup:
+    Description: SecurityGroup ID to permit login from bastion hosts
+    Value: !Ref SSHFromBastionSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-BAST-SC

@@ -1,0 +1,192 @@
+Description:
+  Matheus Liberato / Udacity 2019
+  This script deploys the necessary servers to run Udagram application.
+
+Parameters:
+  # whatever you consider a changing value, put it as a parameter instead of hard-coding it into your script
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resources
+    Type: String
+
+  SSHKeyfileName:
+    Description: An SSH Keyfile name that will be used to login into resources
+    Type: String
+    Default: udacityproject
+
+Resources:
+
+  # Instace profile contains the IAM Role name(s)
+  # that we want to associate to our auto scaling EC2 Servers
+  IAMRole:
+    Type: AWS::IAM::Role
+    Description: This role is used in Udacity Project to access S3 Bucket by EC2 Instance
+    Properties:
+        RoleName: !Sub "${EnvironmentName}-IAMRole"
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+  IAMPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AmazonS3ReadOnlyAccess
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:ListBucket
+          Resource:
+          - arn:aws:s3:::udacityproject-bucket
+        - Effect: Allow
+          Action:
+          - s3:GetObject
+          Resource:
+          - arn:aws:s3:::udacityproject-bucket/*
+      Roles:
+      - Ref: IAMRole
+
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+      - Ref: IAMRole
+
+  WebAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to our hosts
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      # Inbound traffic
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      # Outbound traffic
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  WebAppLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo apt-get update -y
+          sudo apt-get install unzip awscli -y
+          sudo apt-get install apache2 -y
+          sudo systemctl start apache2.service
+          cd /var/www/html
+          sudo aws s3 cp s3://udacityproject-bucket/udagram.zip .
+          sudo unzip -o udagram.zip
+          sudo chmod 777 index.html
+      ImageId: ami-06f2f779464715dc5
+      SecurityGroups:
+      - Ref: WebAppSecurityGroup
+      - Fn::ImportValue:
+            !Sub "${EnvironmentName}-BAST-SC"
+      IamInstanceProfile: !Ref ProfileWithRolesForOurApp
+      InstanceType: t3.medium
+      KeyName: !Sub "${SSHKeyfileName}" ## Used by bastion host
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdk"
+        Ebs:
+          VolumeSize: '10'
+
+  WebAppAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+      - Fn::ImportValue:
+          !Sub "${EnvironmentName}-PRIV-NETS"
+      LaunchConfigurationName:
+        Ref: WebAppLaunchConfig
+      MinSize: '4'
+      MaxSize: '6'
+      TargetGroupARNs:
+      - Ref: WebAppTargetGroup
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to our load balancer
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  WebAppLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+      - Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
+      - Fn::ImportValue: !Sub "${EnvironmentName}-PUB2-SN"
+      SecurityGroups:
+        - Ref: LoadBalancerSecurityGroup
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref WebAppTargetGroup
+      LoadBalancerArn:
+        Ref: WebAppLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  ALBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - Type: forward
+        TargetGroupArn: !Ref WebAppTargetGroup
+      Conditions:
+      - Field: path-pattern
+        Values: [/]
+      ListenerArn: !Ref Listener
+      Priority: 1
+
+  WebAppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 20
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 8
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
+      VpcId:
+        Fn::ImportValue:
+          Fn::Sub: "${EnvironmentName}-VPCID"
+
+Outputs:
+#Bonus points for useful outputs!
+  WebAppLoadBalancer:
+      Description: Public URL of the Load Balancer
+      Value: !Join [ "", [ 'http://', !GetAtt WebAppLoadBalancer.DNSName ]]
+      Export:
+        Name: !Sub ${EnvironmentName}-LB-URL
