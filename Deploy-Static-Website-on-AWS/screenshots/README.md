@@ -1,16 +1,27 @@
 # Screenshots
 
-![img-1](screenshots/01-s3-bucket-on-aws-console.png)
+#### S3 Bucket created.
+![img-1](01-s3-bucket-on-aws-console.png)
 
-![img-2](screenshots/02-all_files_uploaded_to_bucket.png)
+#### All files uploaded to S3 Bucket.
+![img-2](02-all_files_uploaded_to_bucket.png)
 
-![img-3](screenshots/03-static-website-hosting.png)
+#### S3 Bucket property set to `Static website hosting`.
 
-![img-4](screenshots/04-IAM-bucket-policy.png)
+![img-3](03-static-website-hosting.png)
 
-![img-5](screenshots/05-cloud-front-01.png)
+#### IAM policy settting permission to get website content.
 
-![img-6](screenshots/06-cloud-front-details.png)
+![img-4](04-IAM-bucket-policy.png)
 
-![img-7](screenshots/07-website-accessed-browser.png)
+#### CloudFront
 
+![img-5](05-cloud-front-01.png)
+
+#### CloudFront in details
+
+![img-6](06-cloud-front-details.png)
+
+#### Website accessed using a web browser.
+
+![img-7](07-website-accessed-browser.png)
