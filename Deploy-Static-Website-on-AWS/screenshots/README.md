@@ -24,3 +24,5 @@
 
 #### Website accessed using a web browser.
 
+![img-7](07-website-accessed-browser.png)
+
