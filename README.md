@@ -1,6 +1,6 @@
 ## Overview
 
-This repository contains all projects make during Udacity Cloud DevOps
+This repository contains all projects made during Udacity Cloud DevOps
  Engineer Nanodegree. Each folder inside this repository correspond to 
 one of udacity's project. For an more in depth explanation about each 
 project, please look at its respective README.md inside of each folder.
